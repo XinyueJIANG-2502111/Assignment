@@ -10,6 +10,36 @@
 int playerScore = 0;
 const float PLAYER_COLLISION_RADIUS = 16.0f; // 与你解算障碍物用的半径一致
 
+// ========================================================
+// 游戏全局重置函数
+// ========================================================
+void ResetGame(Player& player, TerrainManager& terrain, Camera& camera, int& score) {
+    // 1. 重置得分
+    score = 0;
+
+    // 2. 重置玩家物理状态与核心变量
+    player.position = Vector2{ 100.0f, 300.0f }; // 回到初始出生点
+    player.velocity = Vector2{ 0.0f, 0.0f };     // 速度清零
+    player.isDead = false;                     // 复活
+
+    // 记得把上一把飞到一半的钩爪状态彻底掐断，否则出生瞬间绳子会乱飞！
+    player.grappleState = Player::GrappleState::None;
+    player.isGrappling = false;
+
+    // 3.【核心卡点】：彻底清空并重置地形管理器
+    // 假设你的 TerrainManager 内部有 clear 相关的函数，或者可以直接调用其初始化
+    terrain.obstacles.clear(); // 强行清空所有砖块数组！
+    terrain.cores.clear();     // 强行清空所有可收集核心！
+
+    // 重新调用你最开始在 main 里面调用过的地形初始生成逻辑
+    // 比如：生成出生点附近的头几块打底砖块
+    terrain.Init();
+
+    // 4. 重置摄像机位置，防止画面卡在上一把死亡的老地方
+    camera.position.x = 0.0f;
+    camera.position.y = 0.0f;
+}
+
 // ==========================================
 // 3. 游戏主程序入口（相机与无限世界测试版）
 // ==========================================
@@ -86,12 +116,17 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         }
 
         if (player.isDead && CheckHitKey(KEY_INPUT_R)) {
-            // 满血复活！重置所有状态
+            // 重置所有状态
             player.isDead = false;
             player.noInputWaterTimer = 0.f;
+            player.buoyancyScale = 1.f;
+            playerScore = 0;
             player.position = { 400.0f, 300.0f };
             player.velocity = { 0.0f, 0.0f };
             player.ReleaseGrapple();
+            terrain.obstacles.clear();
+            terrain.cores.clear();
+            terrain.Init();
         }
 
         if (player.isDead && CheckHitKey(KEY_INPUT_ESCAPE)) {
@@ -207,7 +242,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
             //DrawString(320, 260, "YOU DROWNED IN CYBER MATRIX", GetColor(255, 50, 50));
             DrawString(340, 300, "Press [R] to Respawn", GetColor(255, 50, 50));
-            DrawString(340, 300, "Press [Esc] to Quit", GetColor(255, 50, 50));
+            DrawString(340, 330, "Press [Esc] to Quit", GetColor(255, 50, 50));
         }
 
         // 实时打印大世界的绝对物理坐标，方便观察无限位移

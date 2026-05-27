@@ -3,6 +3,7 @@
 
 struct Vector2 {
     float x, y;
+    //Vector2(float xx, float yy) { x = xx; y = yy; }
 
     Vector2 operator+(const Vector2& o) const { return { x + o.x, y + o.y }; }
     Vector2 operator-(const Vector2& o) const { return { x - o.x, y - o.y }; }
