@@ -35,3 +35,6 @@ cmake-build-release/
 # ==========================================
 Thumbs.db
 .DS_Store
+
+x64/
+X64/
