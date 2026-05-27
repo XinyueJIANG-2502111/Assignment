@@ -1,0 +1,14 @@
+﻿  Effect.hpp
+C:\Users\student\Desktop\DxLib (2)\DxLib\Source\Effect.hpp(1,1): warning C4819: ファイルは、現在のコード ページ (932) で表示できない文字を含んでいます。データの損失を防ぐために、ファイルを Unicode 形式で保存してください。
+C:\Users\student\Desktop\DxLib (2)\DxLib\Source\Effect.hpp(37,9): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\student\Desktop\DxLib (2)\DxLib\Source\Effect.hpp(38,9): warning C4244: '=': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\student\Desktop\DxLib (2)\DxLib\Source\Effect.hpp(61,42): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\Users\student\Desktop\DxLib (2)\DxLib\Source\Effect.hpp(61,39): warning C4244: '引数': 'int' から 'float' への変換です。データが失われる可能性があります。
+C:\Users\student\Desktop\DxLib (2)\DxLib\Source\Effect.hpp(65,15): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+C:\Users\student\Desktop\DxLib (2)\DxLib\Source\Effect.hpp(64,15): warning C4244: '引数': 'float' から 'int' への変換です。データが失われる可能性があります。
+  コード生成しています。
+  0 of 3070 functions ( 0.0%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  コード生成が終了しました。
+  DxLib.vcxproj -> C:\Users\student\Desktop\DxLib (2)\DxLib\x64\Release\DxLib.exe
