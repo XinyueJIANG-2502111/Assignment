@@ -124,9 +124,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             player.position = { 400.0f, 300.0f };
             player.velocity = { 0.0f, 0.0f };
             player.ReleaseGrapple();
-            terrain.obstacles.clear();
-            terrain.cores.clear();
+            camera.Init();
             terrain.Init();
+            terrain.UpdateAllDirections(camera.position);
         }
 
         if (player.isDead && CheckHitKey(KEY_INPUT_ESCAPE)) {
@@ -250,6 +250,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         DrawFormatString(20, 80, GetColor(0, 255, 255), "Camera World Pos: X:%.1f, Y:%.1f", camera.position.x, camera.position.y);
         DrawFormatString(20, 100, GetColor(255, 255, 0), "Player Speed    : %.2f px/s", player.velocity.Length());
         DrawFormatString(20, 120, GetColor(255, 255, 0), "Rope Length     : %.2f px", player.isGrappling ? player.ropeLength : 0.0f);
+
+        DrawFormatString(20, 150, GetColor(255, 255, 255),
+            "Obstacles: %d | Loaded Chunks: %d | Cam: (%.1f, %.1f)",
+            terrain.obstacles.size(), terrain.loadedChunks.size(), camera.position.x, camera.position.y);
 
         ScreenFlip();
     }

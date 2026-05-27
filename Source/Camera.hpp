@@ -7,6 +7,10 @@ class Camera {
 public:
     Vector2 position{ 400.0f, 300.0f }; // 相机在世界中的中心点坐标
 
+    void Init() {
+        position = Vector2{ 400.0f, 300.0f };
+    }
+
     // 核心数学公式：世界坐标转屏幕坐标
     Vector2 WorldToScreen(const Vector2& worldPos) const {
         return {

@@ -126,7 +126,7 @@ inline CollisionResult CheckPlayerCollision(const Vector2& playerPos, float radi
 
 // 地形管理器
 class TerrainManager {
-private:
+public:
     const float CHUNK_SIZE = 400.0f; // 每个正方形区块的大小
 
     // 记录当前已经加载（实例化）的区块坐标，防止重复生成
@@ -161,13 +161,16 @@ public:
     }
 
     void Init() {
+        lastGeneratedX = 300.0f;
+
         obstacles.clear();
         cores.clear();
+        particles.clear();
         loadedChunks.clear();
 
         // 出生点安全基石：不管怎么随机，确保 (0,0) 区块中心有个稳固的落脚点
         obstacles.push_back({ 200.0f, 500.0f, 400.0f, 40.0f, GetColor(110, 110, 120) });
-        loadedChunks.insert({ 0, 1 }); // 标记该区域已处理
+        //loadedChunks.insert({ 0, 1 }); // 标记该区域已处理
     }
 
     //【全方位核心算法】：根据相机当前的中心点，加载周围的区块
