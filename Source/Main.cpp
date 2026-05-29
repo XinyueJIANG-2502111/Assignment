@@ -7,43 +7,45 @@
 #include <cmath>
 #include <vector>
 
-int playerScore = 0;
-const float PLAYER_COLLISION_RADIUS = 16.0f; // 与你解算障碍物用的半径一致
+int playerScore = 0;                         // スコア
+const float PLAYER_COLLISION_RADIUS = 16.0f; // プレイヤーの半径
 
 // ==========================================
-// 3. 游戏主程序入口（相机与无限世界测试版）
+//  main function
 // ==========================================
-int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow) {
-    // 基础引擎配置
-    ChangeWindowMode(TRUE);          // 窗口模式
-    SetGraphMode(800, 600, 32);      // 800x600 分辨率
+int WINAPI WinMain(_In_ HINSTANCE hInstance, _In_opt_ HINSTANCE hPrevInstance, _In_ LPSTR lpCmdLine, _In_ int nCmdShow) {
+    // DxLib の基本設定
+    ChangeWindowMode(TRUE);          // ウィンドウモード
+    SetGraphMode(800, 600, 32);      // 解像度（画面サイズ）
     SetWindowText("test");
 
     if (DxLib_Init() == -1) return -1;
-    SetDrawScreen(DX_SCREEN_BACK);   // 开启双缓冲
+    SetDrawScreen(DX_SCREEN_BACK);
 
+    // ゲームに必要なオブジェクト
     Player player;
     Water water;
     Camera camera;
     TerrainManager terrain;
 
-    // プレイヤー位置初期化
+    // 初期化
     player.position = { 400.0f, 400.0f };
-
     terrain.Init();
 
-    // 用高性能计数器精确计算 DeltaTime
+    // DeltaTime
     LONGLONG prevTime = GetNowHiPerformanceCount();
 
-    // 主游戏循环
+    // main loop
     while (ProcessMessage() == 0 && ClearDrawScreen() == 0) {
-        // ---- A. 计算 DeltaTime ----
+        // DeltaTime
         LONGLONG currTime = GetNowHiPerformanceCount();
         float dt = static_cast<float>(currTime - prevTime) / 1000000.0f;
         prevTime = currTime;
-        if (dt > 0.05f) dt = 0.05f; // 限制帧率突变对物理的干扰
+        if (dt > 0.05f) dt = 0.05f;
 
-        // ---- B. 获取玩家输入 ----
+        // ==========================================================================================================
+        // プレイヤー入力
+        // ==========================================================================================================
         int horizontalInput = 0;
         if (CheckHitKey(KEY_INPUT_A) || CheckHitKey(KEY_INPUT_LEFT))  horizontalInput = -1;
         if (CheckHitKey(KEY_INPUT_D) || CheckHitKey(KEY_INPUT_RIGHT)) horizontalInput = 1;
@@ -51,7 +53,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         int verticalInput = 0;
         if (CheckHitKey(KEY_INPUT_S) || CheckHitKey(KEY_INPUT_DOWN)) verticalInput = 1;
 
-        // 跳跃判定
+        // ジャンプ
         bool jumpInput = false;
         if (CheckHitKey(KEY_INPUT_SPACE)) {
             jumpInput = true;
@@ -60,33 +62,36 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
         bool reelInput = (CheckHitKey(KEY_INPUT_W) || CheckHitKey(KEY_INPUT_UP));
 
-        // 获取当前鼠标在屏幕上的像素位置
+        // マウス位置を取得
         int mouseX, mouseY;
         GetMousePoint(&mouseX, &mouseY);
 
-        // 把鼠标的屏幕像素坐标转换为大世界的【绝对世界坐标】
+        // 座標変換
         Vector2 mouseWorldPos = {
             static_cast<float>(mouseX) + camera.position.x - 400.0f,
             static_cast<float>(mouseY) + camera.position.y - 300.0f
         };
 
-        // 鼠标左键按下：发射钩爪
+        // 左クリック：ワイヤーを発射する
         if ((GetMouseInput() & MOUSE_INPUT_LEFT) != 0) {
             jumpInput = true;
-            //player.LaunchGrapple(mouseWorldPos, terrain); // 传入转换后的世界坐标
-            // 现在没有左/右/上方边界了，只要没挂钩，你可以点大世界的任何地方挂载！
+
+            // なにもくっついていない場合
             if (player.grappleState == Player::GrappleState::None) {
                 player.LaunchGrapple(mouseWorldPos, terrain);
             }
         }
 
-        // 鼠标右键：松开钩爪
+        // 右クリック：
         if ((GetMouseInput() & MOUSE_INPUT_RIGHT) != 0) {
             player.ReleaseGrapple();
         }
 
+        // ==========================================================================================================
+        // ゲームオーバー
+        // ==========================================================================================================
+        //  Rを押してリセット
         if (player.isDead && CheckHitKey(KEY_INPUT_R)) {
-            // 重置所有状态
             player.isDead = false;
             player.noInputWaterTimer = 0.f;
             player.buoyancyScale = 1.f;
@@ -99,80 +104,75 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             terrain.UpdateAllDirections(camera.position);
         }
 
+        // Escを押して終了
         if (player.isDead && CheckHitKey(KEY_INPUT_ESCAPE)) {
             break;
         }
 
-        //【核心新增】：实时计算相机视口的右边缘世界坐标
-        // 驱动无限生成与过时方块销毁
+        // マップを更新する
         terrain.UpdateAllDirections(camera.position);
-        // ========================================================
-        // 【全新新增】：金币/核心收集的碰撞实时解算
-        // ========================================================
+
+        // ==========================================================================================================
+        // アイテム獲得判定
+        // ==========================================================================================================
         if (!player.isDead) {
             for (auto& core : terrain.cores) {
                 if (core.isCollected) continue;
 
-                // 计算玩家中心点和核心中心点的绝对距离
+                // プレイヤーとアイテムの距離（中心点）
                 float dx = player.position.x - core.x;
                 float dy = player.position.y - core.y;
                 float distance = std::sqrt(dx * dx + dy * dy);
 
-                // 圆形碰撞公式：如果两点距离小于“玩家半径 + 核心半径”
+                // 当たり判定
                 if (distance < (PLAYER_COLLISION_RADIUS + core.radius)) {
 
-                    // 判定成功吃掉！
+                    // 当たった
                     core.isCollected = true;
-                    playerScore += 1; // 喜提 100 分！
+                    playerScore += 1;
 
-                    //【核心新增】：吃掉核心的瞬间，在核心的位置原地引爆霓虹粒子特效！
+                    // エフェクトを再生する
                     terrain.SpawnExplosion({ core.x, core.y }, core.color);
-
-                    // 顺便往玩家当前的尾巴里扔一个发光爆发点
                     player.trail.push_back({ player.position, 2.0f });
                 }
             }
         }
 
-        // ---- C. 物理与相机跟随更新 ----
+        // ==========================================================================================================
+        // 更新
+        // ==========================================================================================================
         water.Update(dt);
         float cameraLeft = camera.position.x - 400.0f;
-
-        // 调用解耦后的物理扩展函数，将水体和控制量传入
         player.Update(dt, horizontalInput,verticalInput, jumpInput, reelInput, water, cameraLeft, terrain);
-
-        // 让相机利用 Lerp 算法平滑追踪玩家的世界坐标
         camera.Follow(player.position, dt);
 
+        // ==========================================================================================================
+        // 背景
+        // ==========================================================================================================
+        const int gridSpacing = 40; // 間隔
 
-        // ==========================================
-        // 动态无限网格背景渲染
-        // ==========================================
-        const int gridSpacing = 40; // 保持原有的 40 像素赛博朋克空间感
-
-        // 动态计算当前相机视野在世界中的四个边界坐标
+        // 境界座標
         float worldLeft = camera.position.x - 400.0f;
         float worldRight = camera.position.x + 400.0f;
         float worldTop = camera.position.y - 300.0f;
         float worldBottom = camera.position.y + 300.0f;
 
-        // 根据边界世界坐标进行向下取整，获取当前视野里第一条网格线的世界起始位置
+        // 境界座標から描画範囲を計算
         int startGridX = static_cast<int>(floorf(worldLeft / gridSpacing)) * gridSpacing;
         int startGridY = static_cast<int>(floorf(worldTop / gridSpacing)) * gridSpacing;
 
-        // 1. 绘制纵向世界网格线 (在水面 550.0f 处自动截断)
+        // 描画する
         for (int x = startGridX; x <= worldRight; x += gridSpacing) {
             Vector2 sTop = camera.WorldToScreen({ static_cast<float>(x), worldTop });
             Vector2 sBottom = camera.WorldToScreen({ static_cast<float>(x), 550.0f });
 
-            if (sBottom.y < sTop.y) sBottom.y = sTop.y; // 防御性裁切
+            if (sBottom.y < sTop.y) sBottom.y = sTop.y;
 
             DrawLine(static_cast<int>(sTop.x), static_cast<int>(sTop.y),
                 static_cast<int>(sBottom.x), static_cast<int>(sBottom.y),
                 GetColor(30, 30, 45));
         }
 
-        // 2. 绘制横向世界网格线 (只在水面 550.0f 以上的空间绘制)
         for (int y = startGridY; y <= 550; y += gridSpacing) {
             if (y > 550) continue;
 
@@ -184,38 +184,41 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
                 GetColor(30, 30, 45));
         }
 
-        // ---- D. 实体统一渲染（上交相机） ----
+        // ==========================================================================================================
+        // プレイヤー・マップを描画する
+        // ==========================================================================================================
         terrain.Draw(camera);
         player.Draw(camera, mouseWorldPos, terrain);
-
         water.Draw(camera);
 
-        // ========================================================
-        // 【全新新增】：在屏幕左上角打印极具未来感的得分 UI
-        // ========================================================
-        // 绘制一个半透明的黑色底框，显得很高级
+        // ==========================================================================================================
+        // UI（スコア表示）
+        // ==========================================================================================================
         SetDrawBlendMode(DX_BLENDMODE_ALPHA, 120);
         DrawBox(15, 15, 250, 50, GetColor(0, 0, 0), TRUE);
-        DrawBox(15, 15, 250, 50, GetColor(0, 240, 210), FALSE); // 霓虹蓝绿边框
+        DrawBox(15, 15, 250, 50, GetColor(0, 240, 210), FALSE);
         SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
-
-        // 打印分数文本（DxLib 默认字体）
         DrawFormatString(30, 24, GetColor(255, 255, 255), "CORE COLLECTED: %06d", playerScore);
 
-        // ---- E. UI 调试信息界面 (不随相机滚动，直接固定在物理屏幕上) ----
-        //DrawString(20, 20, "[CAMERA TEST] Mouse Left: Shoot Hook anywhere | Mouse Right: Release Hook", GetColor(255, 255, 255));
-        //DrawString(20, 40, "              A / D: Add Swing Force | W: Reel In | SPACE: Jump", GetColor(255, 255, 255));
+        // ==========================================================================================================
+        // ゲームオーバー画面
+        // ==========================================================================================================
         if (player.isDead) {
             SetDrawBlendMode(DX_BLENDMODE_ALPHA, 180);
-            DrawBox(0, 0, 800, 600, GetColor(255, 255, 255), TRUE); // 整个屏幕蒙上一层白纱
+            DrawBox(0, 0, 800, 600, GetColor(255, 255, 255), TRUE);
             SetDrawBlendMode(DX_BLENDMODE_NOBLEND, 0);
 
-            //DrawString(320, 260, "YOU DROWNED IN CYBER MATRIX", GetColor(255, 50, 50));
             DrawString(340, 300, "Press [R] to Respawn", GetColor(255, 50, 50));
             DrawString(340, 330, "Press [Esc] to Quit", GetColor(255, 50, 50));
         }
 
-        // 实时打印大世界的绝对物理坐标，方便观察无限位移
+
+        // ==========================================================================================================
+        // デバッグ：いろいろな情報を表示する
+        // ==========================================================================================================
+        //DrawString(20, 20, "[CAMERA TEST] Mouse Left: Shoot Hook anywhere | Mouse Right: Release Hook", GetColor(255, 255, 255));
+        //DrawString(20, 40, "              A / D: Add Swing Force | W: Reel In | SPACE: Jump", GetColor(255, 255, 255));
+        
         //DrawFormatString(20, 60, GetColor(0, 255, 255), "Player World Pos: X:%.1f, Y:%.1f", player.position.x, player.position.y);
         //DrawFormatString(20, 80, GetColor(0, 255, 255), "Camera World Pos: X:%.1f, Y:%.1f", camera.position.x, camera.position.y);
         //DrawFormatString(20, 100, GetColor(255, 255, 0), "Player Speed    : %.2f px/s", player.velocity.Length());
